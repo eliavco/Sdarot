@@ -177,7 +177,7 @@ async function UCall(slug, sNum, eNum, sId, host, protocol){
         if (c.watch['480']) q = '480';
         if (c.watch['720']) q = '720';
         if (c.watch['1080']) q = '1080';
-        const w = `${protocol}://${c.url}/w/episode/${q}/${c.VID}.mp4?token=${c.watch[q]}&time=${c.time}&uid=${c.uid}`;
+        const w = `http://${c.url}/w/episode/${q}/${c.VID}.mp4?token=${c.watch[q]}&time=${c.time}&uid=${c.uid}`;
         return w;
     }
 
@@ -210,7 +210,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
         console.log(w);
         const file = fs.createWriteStream(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`);
         try {
-            const response = await fetch(w, {
+            const res = await fetch(w, {
                 method: 'GET',
                 headers: {
                     'Host': host,
@@ -227,7 +227,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
                     'TE': 'Trailers'
                 }
             });
-            response.pipe(file);
+            res.body.pipe(file);
             const end = new Promise(function(resolve, reject) {
                 file.on('finish', function() {
                     file.close(()=>{
@@ -235,7 +235,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
                         resolve();
                     });  // close() is async, call cb after close completes.
                 }).on('error', function(err) {
-                    fs.unlink(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`);
+                    fs.unlinkSync(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`);
                     reject(err);
                 });
             });
@@ -246,7 +246,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
                 console.log(err.message); 
             }
         } catch (err) {
-            fs.unlink(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`); // Delete the file async. (But we don't check the result)
+            fs.unlinkSync(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`); // Delete the file async. (But we don't check the result)
             console.log(err.message);
             console.log(`Retrying to Download S${sNum}E${eNum}`);
         }
