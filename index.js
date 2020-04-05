@@ -2,6 +2,8 @@ const fetch = require('node-fetch');
 const http = require('http');
 const fs = require('fs');
 const { JSDOM } = require("jsdom");
+const readline = require('readline');
+
 const showNum = process.argv[2]*1;
 // To run script find show id on sdarot.life and run the following command in directory: npm start -- {id}
 // For example, for the show Ramzor run: npm start -- 226
@@ -76,24 +78,29 @@ async function GetInfo(i, host, protocol, baseP) {
         await GetSeason(i, ind + 1, host, protocol);
     }
     const shName = decodeURI(showSlug).substring(showSlug.indexOf('-')+1);
-    if (!fs.existsSync(`${baseP}${shName}`)){
-        fs.mkdirSync(`${baseP}${shName}`);
-    }
-    baseShow = `${baseP}${shName}\\`
-    for (let n = 0; n < seasonNum; n++) {
-        if (!fs.existsSync(`${baseShow}Season${n+1}`)){
-            fs.mkdirSync(`${baseShow}Season${n+1}`);
+    baseShow = `${baseP}${shName}\\`;
+    let shouldDir = true;
+    const anb = await openNPrompt('setting up directories');
+    if (anb) shouldDir = false;
+    if (shouldDir) {
+        if (!fs.existsSync(`${baseP}${shName}`)){
+            fs.mkdirSync(`${baseP}${shName}`);
         }
-    }
-    let all = '';
-    seasons.forEach((season, sInd) => {
-        all += `Season Num: ${sInd + 1}\n\tNumber of Episodes in season: ${season.length}\n`;
-        season.forEach((episode, eInd) => {
-           all += `\t\tEpisode Num: ${eInd + 1}\n\t\t\t${episode}\n`;
+        for (let n = 0; n < seasonNum; n++) {
+            if (!fs.existsSync(`${baseShow}Season${n+1}`)){
+                fs.mkdirSync(`${baseShow}Season${n+1}`);
+            }
+        }
+        let all = '';
+        seasons.forEach((season, sInd) => {
+            all += `Season Num: ${sInd + 1}\n\tNumber of Episodes in season: ${season.length}\n`;
+            season.forEach((episode, eInd) => {
+               all += `\t\tEpisode Num: ${eInd + 1}\n\t\t\t${episode}\n`;
+            });
+            all += '\n'
         });
-        all += '\n'
-    });
-    fs.writeFileSync(`${baseShow}Description.txt`, `${showNum}\nName: ${showName}\nNumber Of Seasons:${seasonNum}\nDescription: ${description}\n\n---\n\n${all}`);
+        fs.writeFileSync(`${baseShow}Description.txt`, `${showNum}\nName: ${showName}\nNumber Of Seasons:${seasonNum}\nDescription: ${description}\n\n---\n\n${all}`);
+    }
 }
 
 function wait (ms) {
@@ -194,7 +201,10 @@ async function issueNewToken() {
 
 async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
     console.log(`Downloading S${sNum}E${eNum}`);
+    const ableString = eName.replace(/\?|:|"/g, '');
     let go = false;
+    const an = await openNPrompt(`S${sNum}E${eNum} ${eName}`);
+    if (an) go = true;
     while(!go) {
         let w;
         let counter = 0;
@@ -208,7 +218,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
             counter++;
         }
         console.log(w);
-        const file = fs.createWriteStream(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`);
+        const file = fs.createWriteStream(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${ableString}.mp4`);
         try {
             const res = await fetch(w, {
                 method: 'GET',
@@ -235,7 +245,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
                         resolve();
                     });  // close() is async, call cb after close completes.
                 }).on('error', function(err) {
-                    fs.unlinkSync(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`);
+                    fs.unlinkSync(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${ableString}.mp4`);
                     reject(err);
                 });
             });
@@ -246,7 +256,7 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
                 console.log(err.message); 
             }
         } catch (err) {
-            fs.unlinkSync(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${eName}.mp4`); // Delete the file async. (But we don't check the result)
+            fs.unlinkSync(`${baseShow}Season${sNum}\\${sNum},${eNum}\uA789 ${ableString}.mp4`); // Delete the file async. (But we don't check the result)
             console.log(err.message);
             console.log(`Retrying to Download S${sNum}E${eNum}`);
         }
@@ -269,3 +279,28 @@ async function RUN() {
 }
 
 RUN();
+
+async function openNPrompt(skip) {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    const promisified = new Promise(function (resolve, reject) {
+        rl.question(`Skip ${skip}? 's' to skip\n`, (answer) => {
+            resolve(answer);
+        });
+        setTimeout(() => {
+            resolve();
+        }, 5000);
+    });
+    
+    const anj = await promisified;
+    if (anj == 's') {
+        console.log(`Skipping ${skip}`);
+        rl.close();
+        return 'skip';
+    }
+    rl.close();
+    return null;
+}
