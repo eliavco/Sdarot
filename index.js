@@ -15,7 +15,7 @@ let showSlug = '';
 let seasons = [];
 let description = '';
 
-const webHost = 'sdarot.life';
+const webHost = 'sdarot.work';
 const webProtocol = 'https';
 let cookieSdarot = 'ojOk17PK1g3tc3bQAeMoTHlFkii-IR4NpLBrZImLA%2Cepgd5yw7RmUhIKtg9Kq8hy5RIH-mbtczgvRGq15JdezGgS-v7ao9w0J6JBD85tBG4fnmleHlrVVjnhYs2bSQ4Y';
 
@@ -192,7 +192,7 @@ async function UCall(slug, sNum, eNum, sId, host, protocol){
 }
 
 async function issueNewToken() {
-    const res = await fetch('https://sdarot.life/');
+    const res = await fetch(`${webProtocol}://${webHost}/`);
     const cookies = res.headers.raw()['set-cookie'][0];
     const Sdarot = cookies.substring(cookies.indexOf('Sdarot=') + 7, cookies.substring(cookies.indexOf('Sdarot=')).indexOf(';'));
     cookieSdarot = Sdarot;
@@ -200,7 +200,7 @@ async function issueNewToken() {
 }
 
 async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
-    console.log(`Downloading S${sNum}E${eNum}`);
+	console.log(`Downloading S${sNum}E${eNum}`);
     const ableString = eName.replace(/\?|:|"/g, '');
     let go = false;
     const an = await openNPrompt(`S${sNum}E${eNum} ${eName}`);
@@ -285,7 +285,7 @@ async function openNPrompt(skip) {
       input: process.stdin,
       output: process.stdout
     });
-    
+
     const promisified = new Promise(function (resolve, reject) {
         rl.question(`Skip ${skip}? 's' to skip\n`, (answer) => {
             resolve(answer);
