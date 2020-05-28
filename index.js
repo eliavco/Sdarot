@@ -8,7 +8,7 @@ const showNum = process.argv[2]*1;
 // To run script find show id on sdarot.life and run the following command in directory: npm start -- {id}
 // For example, for the show Ramzor run: npm start -- 226
 const base = 'C:\\Users\\eliav_1iz7\\Documents\\TVShows\\';
-let baseShow = 'C:\\Users\\eliav_1iz7\\Documents\\TVShows\\';
+let baseShow = 'C:\\Users\\eliav_1iz7\\Documents\\TVShows\\רמזור-ramzor\\';
 let showName = '';
 let seasonNum = 0;
 let showSlug = '';
@@ -17,7 +17,7 @@ let description = '';
 
 const webHost = 'sdarot.work';
 const webProtocol = 'https';
-let cookieSdarot = 'ojOk17PK1g3tc3bQAeMoTHlFkii-IR4NpLBrZImLA%2Cepgd5yw7RmUhIKtg9Kq8hy5RIH-mbtczgvRGq15JdezGgS-v7ao9w0J6JBD85tBG4fnmleHlrVVjnhYs2bSQ4Y';
+let cookieSdarot = 'dp7n0ilajSKlhi-v2IR3CpPTefAlwFW%2CgNhrE5Z3l1-sjzXtbSeIVB10wW%2CYLXH8y6DtYrjjYibDNR20QeevH0znHerlDdWQN0C5ubV-HQM5to0st6DWs44ubbdit6xk';
 
 async function GetInfo(i, host, protocol, baseP) {
     async function GetTitle(id, host, protocol) {
@@ -47,13 +47,15 @@ async function GetInfo(i, host, protocol, baseP) {
     async function GetSeason(id, num, host, protocol) {
         const episodes = [];
         console.log(`Season Num: ${num}`);
-        const main = await fetch(`${protocol}://${host}/watch/${showSlug}/season/${num}/`);
+		const main = await fetch(`${protocol}://${host}/watch/${showSlug}/season/${num}/`);
         if (main.status == 200) {
-            const htmlMain = await main.text();
+			const htmlMain = await main.text();
             const doc = (new JSDOM(htmlMain)).window.document;
-            const episodeList = doc.querySelector('#episode').children;
-            console.log(`\tNumber of Episodes in season: ${episodeList.length}`);
-            for (let ep = 0; ep < episodeList.length; ep ++) {
+			const episodeList = doc.querySelector('#episode').children;
+			const episodesArr = Array.from(episodeList).map(obj => obj.textContent * 1);
+			const maxEpisode = Math.max.apply(null, episodesArr);
+			console.log(`\tNumber of Episodes in season: ${episodeList.length}`);
+            for (let ep = 0; ep < maxEpisode; ep ++) {
                 console.log(`\t\tEpisode Num: ${ep + 1}`);
                 const episodeTitle = await GetEpisode(id, num, ep + 1, host, protocol);
                 console.log(`\t\t\t${episodeTitle}`);
@@ -68,8 +70,10 @@ async function GetInfo(i, host, protocol, baseP) {
         if (main.status == 200) {
             const htmlMain = await main.text();
             const doc = (new JSDOM(htmlMain)).window.document;
-            const title = doc.querySelector('#player .head p').innerHTML;
-            const titleAbs = title.substring(0, title.indexOf(' /'));
+			const title = doc.querySelector('#player .head p');
+			if (!title) return;
+			const titleText = title.innerHTML;
+            const titleAbs = titleText.substring(0, titleText.indexOf(' /'));
             return titleAbs;
         }
     }
@@ -99,7 +103,7 @@ async function GetInfo(i, host, protocol, baseP) {
             });
             all += '\n'
         });
-        fs.writeFileSync(`${baseShow}Description.txt`, `${showNum}\nName: ${showName}\nNumber Of Seasons:${seasonNum}\nDescription: ${description}\n\n---\n\n${all}`);
+		fs.writeFileSync(`${baseShow}Description.txt`, `${showNum}\nName: ${showName}\nNumber Of Seasons:${seasonNum}\nDescription: ${description}\n\n---\n\n${all}`);
     }
 }
 
@@ -202,8 +206,9 @@ async function issueNewToken() {
 async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
 	console.log(`Downloading S${sNum}E${eNum}`);
     const ableString = eName.replace(/\?|:|"/g, '');
-    let go = false;
-    const an = await openNPrompt(`S${sNum}E${eNum} ${eName}`);
+	let go = false;
+	let an;
+    // const an = await openNPrompt(`S${sNum}E${eNum} ${eName}`);
     if (an) go = true;
     while(!go) {
         let w;
@@ -269,13 +274,36 @@ async function TCall(slug, sNum, eNum, eName, sId, host, protocol) {
 
 //TCall('226-%D7%A8%D7%9E%D7%96%D7%95%D7%A8-ramzor', 1, 4, 'MyAss', showNum, webHost, webProtocol);
 async function RUN() {
-    await GetInfo(showNum, webHost, webProtocol, base);
-    console.log('Download has started...\n');
-    for (let l = 0; l < seasons.length; l++) {
-        for (let m = 0; m < seasons[l].length; m++) {
-            await TCall(showSlug, l + 1, m + 1, seasons[l][m], showNum, webHost, webProtocol);
-        }
-    }
+	const seasosnFile = readJson('seasons');
+	if (!seasosnFile) {
+		await GetInfo(showNum, webHost, webProtocol, base);
+		wait(6000);
+		writeJson(seasons, 'seasons');
+	}
+	else {
+		seasons = seasosnFile;
+		console.log('Download has started...\n');
+		for (let l = 0; l < seasons.length; l++) {
+			for (let m = 0; m < seasons[l].length; m++) {
+				if (!seasons[l][m]) continue;
+				await TCall(showSlug, l + 1, m + 1, seasons[l][m], showNum, webHost, webProtocol);
+			}
+		}
+	}
+}
+
+function writeJson(obj, title) {
+	fs.writeFileSync(`${title}.json`, JSON.stringify(obj), 'utf8');
+}
+
+function readJson(filename) {
+	try {
+	const file = fs.readFileSync(`${filename}.json`, 'utf8')
+		return JSON.parse(file);
+	}
+	catch {
+		return;
+	}
 }
 
 RUN();
