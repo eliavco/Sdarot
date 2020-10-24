@@ -52,7 +52,10 @@ async function GetInfo(i, host, protocol, baseP) {
 			const htmlMain = await main.text();
             const doc = (new JSDOM(htmlMain)).window.document;
 			const episodeList = doc.querySelector('#episode').children;
-			const episodesArr = Array.from(episodeList).map(obj => obj.textContent * 1);
+			const episodesArr = Array.from(episodeList).map(obj => obj.textContent).map(epNum => {
+				if (typeof (epNum * 1) !== 'number') { return (epNum.substring(0, epNum.indexOf('+'))) * 1; }
+				return epNum * 1;
+			});
 			const maxEpisode = Math.max.apply(null, episodesArr);
 			console.log(`\tNumber of Episodes in season: ${episodeList.length}`);
             for (let ep = 0; ep < maxEpisode; ep ++) {
